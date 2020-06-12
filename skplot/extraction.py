@@ -1,7 +1,6 @@
 import numpy as np
 import pandas as pd
 
-# TO-DO: Allow to pass function to extract custom information
 def extract_measure(scores,data_kind='train_and_test_scores'):
     '''Extract information from a single dict as provided from 
     sklearn.model_selection.cross_validate
@@ -12,6 +11,9 @@ def extract_measure(scores,data_kind='train_and_test_scores'):
         A single dictionary as returned from `cross_validate`.
         
     data_kind: str or list of str(default='train_and_test_scores')
+    
+        Use a list of strings if you want to extract multiple information.
+    
         Use 'train_and_test_scores' if you want to extract training and test
         scores for each outer fold.
         
@@ -19,7 +21,7 @@ def extract_measure(scores,data_kind='train_and_test_scores'):
         
         Any other string will be interpreted as hyperparameter.
         
-        Use a list of strings if you want to extract multiple information.
+
         
     Returns
     -------
@@ -73,6 +75,15 @@ def extract_measure(scores,data_kind='train_and_test_scores'):
     
             plot_dict['sum_explained_variance'] = sum_explained_variance
         
+        elif callable(kind):
+            
+            returned_values = []
+            
+            for idx in range(0,n_folds):
+                returned_values.append(kind(scores,idx))
+            
+            plot_dict[kind.__name__] = returned_values
+                
         else:
             
             hyper_params = []
