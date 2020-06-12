@@ -18,6 +18,18 @@ def validate_measures(measures,measure_labels):
         if not isinstance(measure_labels,str):
             raise TypeError('If measures is provided as single string, you must provide measure labels as single string, too')
 
+def check_scale_type_dict(scale_type_dict):
+
+    valid_scale_types = set(['nominal','ordinal','interval','ratio'])
+    scale_type_dict_values = set(scale_type_dict.values())
+    
+    if not scale_type_dict_values.issubset(valid_scale_types):
+        raise ValueError('scale type dict contains one or more invalid scale types. Allowed scale types are: nominal, ordinal, interval, ratio')
+
+def check_for_scale_type(plot_df):
+    if not 'scale_type' in plot_df.columns:
+        raise ValueError('input plot df must contain a column scale_type')
+
 def get_iterator_combinations(iterator_dict):
     '''Generate all combinations of elements from a dictionary of iterators.
         
@@ -41,7 +53,6 @@ def get_iterator_combinations(iterator_dict):
         iterators elements.
     '''
     
-    # get list of combinations
     iterator_dict_keys = iterator_dict.keys()
     iterator_combinations = it.product(*(iterator_dict[key] for key in iterator_dict_keys))
     iterator_combinations = list(iterator_combinations)
@@ -49,9 +60,7 @@ def get_iterator_combinations(iterator_dict):
     return iterator_combinations
 
 def get_keys_and_combos(iterator_dict):
-    '''Get the keys of each iterator and the list of combinations for the 
-    iterators elements.'''
-    
+
     iterator_keys = list(iterator_dict.keys())
     iterator_combinations = get_iterator_combinations(iterator_dict)
 
@@ -60,9 +69,6 @@ def get_keys_and_combos(iterator_dict):
 def get_number_of_iterators(iterator_dict):
     return len(iterator_dict)
 
-# FIXME: get_model_titles not really necessary, model_title
-# could also be created from iterator columns
-# use this approach: https://stackoverflow.com/a/54298586/8792159
 def get_model_titles(iterator_keys,iterator_combinations):
     
     model_titles = []
@@ -81,7 +87,7 @@ def get_model_titles(iterator_keys,iterator_combinations):
     return model_titles
 
 def get_plot_df(plot_data,measures=None,measure_labels=None,iterator_dict=None,
-                scale_dict=None):
+                scale_type_dict=None):
     
     '''Prepare extracted measures for plotting.
     
@@ -112,12 +118,10 @@ def get_plot_df(plot_data,measures=None,measure_labels=None,iterator_dict=None,
                       var_name='measure_name',
                       value_name='measure_value')
     
-    # add scale type 
-    # FIXME: Check that all measures must appear in the dict?
-    # FIXME: Check scale dict: only allowed values should be
-    # continuous, categorical, ordinal
-    if scale_dict:
-        plot_df['scale_type'] = plot_df['measure_name'].map(scale_dict)
+
+    if scale_type_dict:
+        check_scale_type_dict(scale_type_dict)
+        plot_df['scale_type'] = plot_df['measure_name'].map(scale_type_dict)
     
     # Add measure labels column
     if measure_labels:
@@ -144,15 +148,16 @@ def get_plot_df(plot_data,measures=None,measure_labels=None,iterator_dict=None,
 
     return plot_df
 
-# TO-DO: This should be also be callable from report module
 def get_continuous_stats_df(plot_df):
+    
+    check_for_scale_type(plot_df)
     
     groupby_vars = ['measure_name','model_number']
     
     if 'model_name' in plot_df.columns:
         groupby_vars.append('model_name')
 
-    continuous_vars_df = plot_df.loc[plot_df['scale_type'] == 'continuous']
+    continuous_vars_df = plot_df.loc[plot_df['scale_type'] == 'interval']
     continuous_stats_df = continuous_vars_df.groupby(groupby_vars)['measure_value'].agg(['mean','median','std']).reset_index()
     continuous_stats_df = continuous_stats_df.sort_values(['model_number','measure_name']).reset_index(drop=True)
     
@@ -160,27 +165,20 @@ def get_continuous_stats_df(plot_df):
 
 def get_categorical_stats_df(plot_df):
     
+    check_for_scale_type(plot_df)
+    
     groupby_vars = ['measure_name','model_number','measure_value']
     
     if 'model_name' in plot_df.columns:
         groupby_vars.append('model_name')
     
-    categorical_vars_df = plot_df.loc[plot_df['scale_type'] == 'categorical']
-
+    categorical_vars_df = plot_df.loc[plot_df['scale_type'] == 'nominal']
     categorical_stats_df = categorical_vars_df.groupby(groupby_vars)['measure_value'].count()
     categorical_stats_df = categorical_stats_df.rename('count')
     categorical_stats_df = categorical_stats_df.reset_index()
     
     return categorical_stats_df
     
-def get_number_of_models(plot_df):
-    n_models = plot_df['model_number'].value_counts().count()
-    return n_models
-
-def get_number_of_measures(plot_df):
-    n_measures = plot_df['measure_name'].value_counts().count()
-    return n_measures
-
 # add a new column that indicates which scores are train scores and which are test scores
 # Doesn't this belong to plotting module?
 def add_score_type(plot_df,train_scores):
