@@ -35,6 +35,7 @@ def save_plot(dst_dir,filename):
             
 def set_x_and_y_axis_layout(g,xlim='auto',ylim='auto',
                             x_tick_spacing='auto',y_tick_spacing='auto'):
+    
     if xlim != 'auto':
         g.set(xlim=xlim)
     
@@ -82,8 +83,6 @@ def get_nested_titles_and_labels(iterator_dict):
 
     return main_xaxis_elements,secondary_xaxis_elements
 
-# FIXME: This should also work for multiple axes of facetgrid (e.g.
-# when using kind = 'box' and separate_measures = True)
 def draw_nested_xaxes(g,y_axis_title,iterator_dict):
 
     # get x-axis elements for main and secondary x-axes
@@ -94,30 +93,51 @@ def draw_nested_xaxes(g,y_axis_title,iterator_dict):
     g.set_xticklabels(main_xaxis_elements)
     g.set_axis_labels(x_var=main_xaxis_elements.name,y_var=y_axis_title)
     
-    for idx in range(0,n_secondary_axes):
-        
-        # create additional ax object
-        ax = g.axes[0,0].twiny()
+    for ax in g.axes.flat:
+        for idx in range(0,n_secondary_axes):
             
-        # Move twinned axis ticks and label from top to bottom
-        ax.xaxis.set_ticks_position("bottom")
-        ax.xaxis.set_label_position("bottom")
-        
-        # Offset the twin axis below the host
-        ax.spines["bottom"].set_position(("axes",-0.20 * (idx + 1)))
+            # create additional ax object
+            twin_ax = ax.twiny()
                 
-        # Hide grid lines
-        ax.grid(False)
+            # Move twinned axis ticks and label from top to bottom
+            twin_ax.xaxis.set_ticks_position("bottom")
+            twin_ax.xaxis.set_label_position("bottom")
+            
+            # Offset the twin axis below the host
+            twin_ax.spines["bottom"].set_position(("axes",-0.20 * (idx + 1)))
+                    
+            # Hide grid lines
+            twin_ax.grid(False)
+            
+            # set ticks and labels
+            twin_ax.set_xticks(secondary_xaxis_elements.index)
+            twin_ax.set_xticklabels(secondary_xaxis_elements.iloc[:,idx])
+            
+            # align ticks with first x-axis
+            twin_ax.set_xlim(ax.get_xlim())
+            
+            # set title
+            twin_ax.set_xlabel(secondary_xaxis_elements.columns[idx])
+
+# FXME: Allow for input dictionary where keys define groups and 
+# list as values define which measure belongs to which group
+def add_score_type(plot_df,train_scores):
+    
+    if not train_scores:
+        raise ValueError('If separate_scores == True, train_scores must be provided')
+     
+    if isinstance(train_scores,str):
+        train_scores = [train_scores]
         
-        # set ticks and labels
-        ax.set_xticks(secondary_xaxis_elements.index)
-        ax.set_xticklabels(secondary_xaxis_elements.iloc[:,idx])
-        
-        # align ticks with first x-axis
-        ax.set_xlim(g.axes[0,0].get_xlim())
-        
-        # set title
-        ax.set_xlabel(secondary_xaxis_elements.columns[idx])
+    train_scores_set = set(train_scores)
+    scores_set = set(plot_df['measure_name'].unique())
+    
+    if not train_scores_set.issubset(scores_set):
+        raise ValueError('all elements of train_scores must appear as score type in plot df')
+    
+    plot_df['score'] = np.where(plot_df['measure_name'].isin(train_scores),'train_score','test_score')
+    
+    return plot_df
 
 def lineplot_scores(plot_df,height=4,aspect=2,col_wrap=1,x_tick_spacing='auto',
                     y_tick_spacing='auto',x_axis_title='Outer Fold',y_axis_title ='Score',xlim='auto',ylim='auto',
@@ -190,96 +210,85 @@ def lineplot_scores(plot_df,height=4,aspect=2,col_wrap=1,x_tick_spacing='auto',
 # FIXME: if only one model is provided and separate measures=True, boxplots
 # are not centered
 # TO-DO: When using kind = 'box', draw mean line
-def catplot_scores(plot_data,iterator_dict=None,measures=None,measure_labels=None,
-                   kind='point',separate_measures=False,train_scores=None,
-                   x_axis_title='Model',y_axis_title ='Score',ylim=(0,1),
-                   y_tick_spacing=0.05,height=4,aspect=2,dst_dir=None,
-                   filename=None,legend_title='Measures',ci='sd',**kwargs):
+def catplot_scores(plot_df,iterator_dict,height=4,aspect=2,kind='point',separate_measures=False,
+                   train_scores=None,x_axis_title='Model',y_axis_title ='Score',ylim=(0,1),
+                   y_tick_spacing=0.05,legend_title='Measures',ci='sd',dst_dir=None,
+                   filename=None,**kwargs):
     
+    # subset to only measures with interval scale ############################
+    plot_df = plot_df.loc[plot_df['scale_type'] == 'interval']
 
     # seaborn settings ########################################################
     sns.set(font='Open Sans',style='whitegrid',font_scale=1)
     
-    ## validate input #########################################################
-    preparation.validate_measures(measures,measure_labels)
-    
-    # prepare plot ############################################################
-    plot_df = preparation.get_plot_df(plot_data=plot_data,
-                                      measures=measures,
-                                      iterator_dict=iterator_dict,
-                                      measure_labels=measure_labels)
-        
     ## get and set variables that are required for later functions ############
-    n_models = preparation.get_number_of_models(plot_data)
+    n_models = get_number_of_models(plot_df)
 
     if iterator_dict:
         iterator_keys,iterator_combinations = preparation.get_keys_and_combos(iterator_dict)
         n_iterators = preparation.get_number_of_iterators(iterator_dict)
         
+    if separate_measures:
+        plot_df = add_score_type(plot_df,train_scores)
+        col = 'score'
+    else:
+        col = None
 
     # Plot ####################################################################
+        
+    g = sns.catplot(x='model_number',
+                    y='measure_value',
+                    hue='measure_name',
+                    col=col,
+                    kind=kind,
+                    data=plot_df,
+                    height=height,
+                    aspect=aspect,
+                    ci=ci,
+                    legend=False,
+                    **kwargs)
+    
     if separate_measures:
         
-        plot_df = preparation.add_score_type(plot_df,train_scores)
-        
-        g = sns.catplot(x='model_number',
-                        y='measure_value',
-                        hue='measure_name',
-                        col='score',
-                        kind=kind,
-                        data=plot_df,
-                        height=height,
-                        aspect=aspect,
-                        ci=ci,
-                        **kwargs)
-    
         # set subplot titles
         axes_iterator = g.axes.flat
         for title,ax in zip(['Train Scores','Test Scores'],axes_iterator):
             ax.set_title(title)
 
-    else:
-        g = sns.catplot(x='model_number',
-                        y='measure_value',
-                        hue='measure_name',
-                        kind=kind,
-                        data=plot_df,
-                        height=height,
-                        aspect=aspect,
-                        ci=ci,
-                        legend=False,
-                        **kwargs)
-    
-    ## Set legend title and labels ############################################
-    if isinstance(measures,list):
-        
-        # add legend
-        g.add_legend()
-        
-        # set title
-        g._legend.set_title(legend_title)
-        
-        # modify legend labels 
-        if measure_labels:
-            if isinstance(measure_labels,str):
-                measure_labels = [measure_labels]
-            for text, label in zip(g._legend.texts,measure_labels):
-                text.set_text(label)
 
-    # set x- and y-axis labels
+    ## Set legend title and labels ############################################
+    g.add_legend()
+    legend_texts = g._legend.texts
+    g._legend.set_title(legend_title)
+    
+    if 'measure_label' in plot_df.columns:
+        
+        measure_labels = get_measure_labels(plot_df)
+     
+        for t,l in zip(legend_texts,measure_labels):
+            t.set_text(l)
+            
+            
+    # Draw x- and y-axis titles and labels ####################################
     if n_models == 1:
         g.set_xticklabels('')
         g.set_axis_labels(x_var='',y_var=y_axis_title)
+    
+
     elif n_models > 1:
+        
         if iterator_dict:
+            
             if n_iterators > 1:
                 draw_nested_xaxes(g,y_axis_title,iterator_dict)
+            
             elif n_iterators == 1:
                 iterator_name = list(iterator_dict.keys())[0]
                 iterator_list = list(iterator_dict.values())[0]
                 g.set_xticklabels(iterator_list)
                 g.set_axis_labels(x_var=iterator_name,y_var=y_axis_title)
-        elif not iterator_dict:
+        
+        else:
             model_numbers = np.linspace(start=1,stop=n_models,num=n_models,dtype=int)
             g.set_xticklabels(model_numbers)
             g.set_axis_labels(x_var=x_axis_title,y_var=y_axis_title)
