@@ -1,4 +1,3 @@
-import numpy as np
 import pandas as pd
 import itertools as it
 import warnings
@@ -179,22 +178,5 @@ def get_categorical_stats_df(plot_df):
     
     return categorical_stats_df
     
-# add a new column that indicates which scores are train scores and which are test scores
-# Doesn't this belong to plotting module?
-def add_score_type(plot_df,train_scores):
-    
-    if not train_scores:
-        raise ValueError('If separate_scores == True, train_scores must be provided')
-    
-    train_scores_set = set(train_scores)
-    scores_set = set(plot_df['measure_name'].cat.categories)
-    
-    if not train_scores_set.issubset(scores_set):
-        raise ValueError('all elements of train_scores must appear as score type in plot df')
-    
-    plot_df['score'] = np.where(plot_df['measure_name'].isin(train_scores),'train_score','test_score')
-    
-    return plot_df
-
 if __name__ == '__main__':
     pass
