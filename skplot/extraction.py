@@ -10,19 +10,21 @@ def extract_measure(scores,data_kind='train_and_test_scores'):
     scores: dict of float arrays of shape=(n_splits,)
         A single dictionary as returned from `cross_validate`.
         
-    data_kind: str or list of str(default='train_and_test_scores')
+    data_kind: str, callable or list of str and/or callables(default='train_and_test_scores')
     
-        Use a list of strings if you want to extract multiple information.
+        Use a list of strings and/or callables if you want to extract multiple information.
     
         Use 'train_and_test_scores' if you want to extract training and test
         scores for each outer fold.
         
         Use 'n_coefs' if you want to get the number of coefficients for each outer fold.
         
-        Any other string will be interpreted as hyperparameter.
+        Use a callable if you want to extract custom information for each outer fold.
+        The callable must accept a `scores` and an `idx` keyword.
         
-
-        
+        def get_intercept_value(scores,idx):
+            return scores['estimator'][idx].best_estimator_._final_estimator.intercept_[0]
+                
     Returns
     -------
     single_plot_data: pd.DataFrame
@@ -98,7 +100,7 @@ def extract_measure(scores,data_kind='train_and_test_scores'):
         
     return single_plot_data
 
-def get_measures_df(scores,data_kind='train_and_test_scores',data_types=None):
+def get_measures_df(scores,data_kind='train_and_test_scores'):
     '''Extract plottable information from one or multiple output dicts as 
     provided from sklearn.model_selection.cross_validate
     
@@ -113,7 +115,8 @@ def get_measures_df(scores,data_kind='train_and_test_scores',data_types=None):
     Returns
     -------
     plot_data: pd.DataFrame()
-        A dataframe which containing extracted information.
+        A dataframe which contains the extracted information from one or multiple
+        output dicts from sklearn.model_selection.cross_validate
     '''
     
     plot_data = pd.DataFrame()
