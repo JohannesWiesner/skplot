@@ -90,15 +90,33 @@ def get_plot_df(plot_data,measures=None,measure_labels=None,iterator_dict=None,
     
     '''Prepare extracted measures for plotting.
     
+    Parameters
+    ----------
+    plot_data: pd.DataFrame()
+        A dataframe provided from skplot.extraction.get_measures_df()
+    
+    measures: list
+        A list of strings defining the names of the measures that where
+        extracted using skplot.extraction.get_measures_df()
+    
+    measure_labels: list
+        A list of strings defining the names of the measures as they should 
+        be plotted
+     
+    scale_type_dict: dict
+        A dictionary where the keys are the measures and the values are one 
+        of 'nominal','ordinal','interval','ratio'. This dictionary defines the
+        type of scale for each measure.
+    
     iterator_dict: dict of iterators or None (default = None)
-    If iterator_dict is `None`, it is assumed that a single model-building-procedure
-    was run.
-    
-    If iterator_dict has one item, it is assumed that different
-    model-building procedures where running within a single loop. 
-    
-    If iterator_dict contains multiple items, it is assumed that different
-    model-building procedures where running within nested-loops.
+        If iterator_dict is `None`, it is assumed that a single model-building-procedure
+        was run.
+        
+        If iterator_dict has one item, it is assumed that different
+        model-building procedures where running within a single loop. 
+        
+        If iterator_dict contains multiple items, it is assumed that different
+        model-building procedures where running within nested-loops.
     
     '''
     
