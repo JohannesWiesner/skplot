@@ -92,7 +92,7 @@ def get_plot_df(plot_data,measures=None,measure_labels=None,iterator_dict=None,
     
     Parameters
     ----------
-    plot_data: pd.DataFrame()
+    plot_data: pd.DataFrame
         A dataframe provided from skplot.extraction.get_measures_df()
     
     measures: list
@@ -117,6 +117,12 @@ def get_plot_df(plot_data,measures=None,measure_labels=None,iterator_dict=None,
         
         If iterator_dict contains multiple items, it is assumed that different
         model-building procedures where running within nested-loops.
+    
+    Returns
+    -------
+    plot_df: pd.DataFrame
+        A dataframe that holds the extracted information in a plot-ready
+        format.
     
     '''
     
