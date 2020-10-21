@@ -1,12 +1,4 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Tue Feb 25 11:30:20 2020
-
-@author: jwiesner
-"""
-
-from skplot import preparation
+from . import preparation
 import seaborn as sns
 import matplotlib.pyplot as plt
 import matplotlib.ticker as plticker
@@ -15,7 +7,6 @@ import numpy as np
 
 # TO-DO: Make plot 'pretty', e.g. set figure background transparent with plt.gcf().patch.set_alpha(0.0)
 # TO-DO: define one function for setting style (setting seaborn stile, font, transparent plot, etc.)
-
 def get_number_of_models(plot_df):
     return plot_df['model_number'].value_counts().count()
 
@@ -33,8 +24,9 @@ def save_plot(dst_dir,filename):
             dst_path = dst_dir + filename
             plt.savefig(dst_path,dpi=600,bbox_inches = "tight")
             
-def set_x_and_y_axis_layout(g,xlim='auto',ylim='auto',
-                            x_tick_spacing='auto',y_tick_spacing='auto'):
+def set_x_and_y_axis_layout(g,xlim='auto',ylim='auto',x_tick_spacing='auto',y_tick_spacing='auto'):
+    """Set both the tick spacing and upper and lower limits for both x- and y-axis.
+    """
     
     if xlim != 'auto':
         g.set(xlim=xlim)
@@ -51,6 +43,28 @@ def set_x_and_y_axis_layout(g,xlim='auto',ylim='auto',
         plt.gca().xaxis.set_major_locator(loc_x)
 
 def plot_mean_lines(axes_flatten,continuous_stats_df,n_models,n_measures):
+    """Plot mean lines for all measures appearing in the plot.
+    
+    Parameters
+    ----------
+    axes_flatten : TYPE
+        Flattened array of all axes that belong to the FacetGrid object
+        
+    continuous_stats_df : pd.DataFrame
+        A dataframe obtained from skplot.preparation.get_continuous_stats_df
+        
+    n_models : int
+        Number of all models (aka. combinations of different pipeline parameters)
+    
+    n_measures : int
+        Number of all measures that are plotted.
+
+    Returns
+    -------
+    None.
+
+    """
+    
     
     # get colors for each score
     current_palette = sns.color_palette()
@@ -67,6 +81,10 @@ def plot_mean_lines(axes_flatten,continuous_stats_df,n_models,n_measures):
             row_idx += 1
             
 def get_nested_titles_and_labels(iterator_dict):
+    """Get upper and all lower x-axis titles and labels for all combinations
+    of different pipelines.
+
+    """
     
     iterator_keys, iterator_combos = preparation.get_keys_and_combos(iterator_dict)
     
@@ -84,6 +102,8 @@ def get_nested_titles_and_labels(iterator_dict):
     return main_xaxis_elements,secondary_xaxis_elements
 
 def draw_nested_xaxes(g,y_axis_title,iterator_dict):
+    """Draw nested x-axes for all combinations of different pipelines.
+    """
 
     # get x-axis elements for main and secondary x-axes
     main_xaxis_elements,secondary_xaxis_elements = get_nested_titles_and_labels(iterator_dict)
@@ -119,8 +139,10 @@ def draw_nested_xaxes(g,y_axis_title,iterator_dict):
             # set title
             twin_ax.set_xlabel(secondary_xaxis_elements.columns[idx])
 
-# FXME: Allow for input dictionary where keys define groups and 
-# list as values define which measure belongs to which group
+# FIXME: Allow for input dictionary where keys define groups and 
+# list as values define which measure belongs to which group.
+# Currently this function is restricted to training and test scores. 
+# It's important that measures WITHIN one plot share the same scale.
 def add_score_type(plot_df,train_scores):
     
     if not train_scores:
@@ -142,6 +164,89 @@ def add_score_type(plot_df,train_scores):
 def lineplot_scores(plot_df,height=4,aspect=2,col_wrap=1,x_tick_spacing='auto',
                     y_tick_spacing='auto',x_axis_title='Outer Fold',y_axis_title ='Score',xlim='auto',ylim='auto',
                     legend_title='Measures',mean_lines=True,dst_dir=None,filename=None):
+    '''Plot measures from one or multiple sklearn pipelines as lineplots.
+    
+    Parameters
+    ----------
+    plot_df: pd.DataFrame
+        A dataframe obtained from skplot.preparation.get_plot_df()
+    
+    height: float
+        Height (in inches) of each facet 
+        
+        Default: 4
+
+    aspect: float 
+        Aspect ratio of each facet, so that aspect * height gives the width of each facet in inches. 
+        
+        Default: 2
+    
+    col_wrap: int 
+        “Wrap” the column variable at this width, so that the column facets span multiple rows. Incompatible with a row facet.
+        
+        Default: 1
+    
+    x_tick_spacing:  float or 'auto'
+        Set the spacing between the x-axis numbers automatically or use 
+        a user defined spacing
+    
+        Default: 'auto'
+    
+    y_tick_spacing:  float or 'auto'
+        Set the spacing between the y-axis numbers automatically or use 
+        a user defined spacing
+    
+        Default: 'auto'
+        
+    x_axis_title: str
+        Set the title(s) for the x-axis / x-axes
+        
+        Default: 'Outer Fold'
+    
+    y_axis-title: str
+        Set the title(s) for the y-axis / y-axes
+        
+        Default: 'Score'
+    
+    x_lim: tuple or 'auto'
+        Set the lower and upper limit of the x-axis or use 
+        user defined limits
+    
+        Default: 'auto'
+    
+    y_lim: tuple or 'auto'
+        Set the lower and upper limit of the x-axis or use 
+        user defined limits
+    
+        Default: 'auto'
+    
+    legend_title: 'str'
+        Set the title of the legend
+        
+        Default: 'Measures'
+    
+    mean_lines: boolean
+        Draw mean lines for each of your measures.
+        
+        Default: True
+    
+    dst_dir: str
+        Path to the directory where the plot should be saved.
+        
+    filename: str
+        Name of the file
+
+
+    Returns
+    -------
+    g: seaborn.FacetGrid object
+        https://seaborn.pydata.org/generated/seaborn.FacetGrid.html
+        
+    See also
+    --------
+    https://seaborn.pydata.org/generated/seaborn.lineplot.html
+
+    '''
     
     # subset to only measures with interval scale
     plot_df = plot_df.loc[plot_df['scale_type'] == 'interval']
@@ -214,6 +319,94 @@ def catplot_scores(plot_df,iterator_dict,height=4,aspect=2,kind='point',separate
                    train_scores=None,x_axis_title='Model',y_axis_title ='Score',ylim=(0,1),
                    y_tick_spacing=0.05,legend_title='Measures',ci='sd',dst_dir=None,
                    filename=None,**kwargs):
+    """Plot measures from one or multiple sklearn pipelines as categorical plots.
+    
+
+    Parameters
+    ----------
+    plot_df: pd.DataFrame
+        A dataframe obtained from skplot.preparation.get_plot_df()
+        
+    iterator_dict: dict of iterators or None (default = None)
+        If iterator_dict is `None`, it is assumed that a single model-building-procedure
+        was run.
+        
+        If iterator_dict has one item, it is assumed that different
+        model-building procedures where running within a single loop. 
+        
+        If iterator_dict contains multiple items, it is assumed that different
+        model-building procedures where running within nested-loops.
+        
+    height: float
+        Height (in inches) of each facet 
+        
+        Default: 4
+
+    aspect: float 
+        Aspect ratio of each facet, so that aspect * height gives the width of each facet in inches. 
+        
+        Default: 2
+    
+    kind: str
+        The kind of plot to draw, corresponds to the name of a categorical axes-level plotting function. Options are: “strip”, “swarm”, “box”, “violin”, “boxen”, “point”, “bar”, or “count”.
+        
+        Default: 'point'
+        
+    separate_measures : bool
+        Plot train and test scores separately in different subplots. If true,
+        you must provide train_scores
+        
+        Default: False
+    
+    train_scores : str or list
+        A list of names that define the names of all train scores.
+        
+    x_axis_title: str
+        Set the title(s) for the x-axis / x-axes
+        
+        Default: 'Model'
+    
+    y_axis-title: str
+        Set the title(s) for the y-axis / y-axes
+        
+        Default: 'Score'
+    
+    y_lim: tuple or 'auto'
+        Set the lower and upper limit of the x-axis or use 
+        user defined limits
+    
+        Default: (0,1)
+    
+    y_spacing: float
+        Set the y-tick spacing between the y-axis ticks.
+        
+        Default: 0.5
+    
+    legend_title: 'str'
+        Set the title of the legend.
+        
+        Default: 'Measures'
+        
+    ci : float or “sd” or None, optional
+        Size of confidence intervals to draw around estimated values. If “sd”, skip bootstrapping and draw the standard deviation of the observations. If None, no bootstrapping will be performed, and error bars will not be drawn.
+    
+        Default: 'sd'
+        
+    dst_dir: str
+        Path to the directory where the plot should be saved.
+        
+    filename: str
+        Name of the file
+        
+    kwargs: key, value pairings
+        Other keyword arguments are passed through to the underlying plotting function.
+
+    Returns
+    -------
+    g: seaborn.FacetGrid object
+        Returns the FacetGrid object with the plot on it for further tweaking.
+
+    """
     
     # subset to only measures with interval scale ############################
     plot_df = plot_df.loc[plot_df['scale_type'] == 'interval']
