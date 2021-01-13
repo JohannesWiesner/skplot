@@ -100,6 +100,7 @@ def extract_measure(scores,data_kind='train_and_test_scores'):
         
     return single_plot_data
 
+# FIXME: rename function to get_plot_data, since this is a more generic name
 def get_measures_df(scores,data_kind='train_and_test_scores'):
     '''Extract plottable information from one or multiple output dicts as 
     provided from sklearn.model_selection.cross_validate

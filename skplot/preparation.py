@@ -85,6 +85,10 @@ def get_model_titles(iterator_keys,iterator_combinations):
     
     return model_titles
 
+# TO-DO: Introduce a keyword argument named e.g. 'exclude'. This shoud
+# serve as opposite to 'measures'-keyword argument, meaning that one could
+# leave measures=None to get all measures but exlude some that the user
+# doesn't want
 def get_plot_df(plot_data,measures=None,measure_labels=None,iterator_dict=None,
                 scale_type_dict=None):
     
